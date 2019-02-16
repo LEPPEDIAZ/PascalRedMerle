@@ -19,41 +19,6 @@ struct shmseg {
 int fill_buffer(char*bufptr, int size);
 int main(int argc, char*argv[])
 {
-	int shmid, numtimes;
-	struct shmseg *shmp;
-	char *bufptr;
-	int spaceavailable;
-	shmid = shmget(SHM_KEY, sizeof(struct shmseg), 0644|IPC_CREAT);
-	if (shmid == -1){
-		perror("Shared memory");
-		return 1;
-	}
-	shmp = shmat(shmid, NULL, 0);
-	if (shmp == (void*)-1){
-		perror("Shared memory attach");
-		return 1;
-	}
-	bufptr = shmp->buf;
-	spaceavailable = BUF_SIZE;
-	for (numtimes = 0; numtimes <5; numtimes ++){
-		shmp->cnt = fill_buffer(bufptr, spaceavailable);
-		shmp->complete = 0;
-		printf("Writing Process: Shared Memory: Wrote %d bytes\n", shmp->cnt);
-		bufptr = shmp->buf;
-		spaceavailable = BUF_SIZE;
-		sleep(3);
-	}
-	printf("Writing Process: Wrote %d times\n", numtimes);
-	shmp->complete =1;
-	if (shmdt(shmp) == -1){
-		perror("shmdt");
-		return 1;
-	}
-	if (shmctl(shmid, IPC_RMID, 0) == -1){
-		perror("shmctl");
-		return 1;
-	}
-	printf("Writing Process: Complete\n");
         pid_t pid;
         int r;
         char buf[1024];
@@ -99,6 +64,41 @@ int main(int argc, char*argv[])
                         fflush(stdin);
                         fgets(cp, 50, stdin);
                         printf("\n(Parent)b: %s",cp);
+			int shmid, numtimes;
+			struct shmseg *shmp;
+			char *bufptr;
+			int spaceavailable;
+			shmid = shmget(SHM_KEY, sizeof(struct shmseg), 0644|IPC_CREAT);
+			if (shmid == -1){
+				perror("Shared memory");
+				return 1;
+			}
+			shmp = shmat(shmid, NULL, 0);
+			if (shmp == (void*)-1){
+				perror("Shared memory attach");
+				return 1;
+			}
+			bufptr = shmp->buf;
+			spaceavailable = BUF_SIZE;
+			for (numtimes = 0; numtimes <5; numtimes ++){
+				shmp->cnt = fill_buffer(bufptr, spaceavailable);
+				shmp->complete = 0;
+				printf(" Process: Shared Memory: Wrote %d bytes\n", shmp->cnt);
+				bufptr = shmp->buf;
+				spaceavailable = BUF_SIZE;
+				sleep(3);
+			}
+			printf(" Process: Wrote %d times\n", numtimes);
+			shmp->complete =1;
+			if (shmdt(shmp) == -1){
+				perror("shmdt");
+				return 1;
+			}
+			if (shmctl(shmid, IPC_RMID, 0) == -1){
+				perror("shmctl");
+				return 1;
+			}
+			printf("Process: Complete\n");
                         if(/*!strncmp("Q",cp,1) || */write(writepipe[1],cp,strlen(cp)+1) < 0)
                         {
                             break;
